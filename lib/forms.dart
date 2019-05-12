@@ -1,157 +1,209 @@
 
 import 'dart:async';
 
-import 'package:form_testing/angular_forms.dart';
+import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 
-import 'validators.dart';
-
-class FormControlState<T> {
-  FormControlState({@required this.value, this.error});
-  final T value;
-  final String error;
+enum ModelUpdateType {
+  Value,
+  Errors,
+  State
 }
 
-typedef ValidatorFn<T> = Map<String, dynamic> Function(T data);
+typedef ViewNotifier(List<ModelUpdateType> updates);
 
-class FormControl<T> {
-
-  FormControl([T initialValue, List<Validator<T>> validators, bool autoValidate]) {
-    _value = initialValue;
-    _validators = validators; //(validators);
-    _autoValidate = autoValidate == true;
-    validate();
-    _updateState();
-  }
-
-//  _initValidators(List<Validator<T>> validators) {
-//    Validators = validators ?? [];
-//    for (var validator in Validators) {
-//      if (validator is AsyncValidator) {
-//        _asyncValidators.add(validator);
-//      } else {
-//        _validators.add(validator);
-//      }
-//    }
-//  }
-
-//  List<Validator> Validators;
-  List<Validator<T>> _validators = [];
-//  List<AsyncValidator<T>> _asyncValidators = [];
-
-  bool _autoValidate;
-  bool _pending;
-
-  bool get pending => _pending;
-  List<Validator> get validators => _validators;
-
-  setAutoValidate(bool autoValidate) {
-    if (!_autoValidate && autoValidate) {
-      validate();
-      _notify();
-    }
-    _autoValidate = autoValidate;
-  }
-
+abstract class AbstractControl<T> {
 
   T _value;
-  T get value => _value;
-  setValue(T newValue) {
-    print("New value: $newValue");
-    _value = newValue;
+  final _errors = Map<String, dynamic>();
+
+  ViewNotifier _viewNotifier;
+  bool _enabled = true;
+  bool _autoValidate = false;
+  ValidatorSet<T> _validators = ValidatorSet<T>([]);
+
+  Map<String, dynamic> get errors => _errors;
+  bool get enabled => _enabled;
+  bool get autoValidate => _autoValidate;
+  bool get isValid => _errors.length == 0;
+
+  /// Get the value of the control. If this control is disabled, the value will be returned as null
+  T get value;
+  Stream<T> viewValueUpdated;
+  Stream<Map<String, dynamic>> errorsUpdated;
+
+
+  /// Should only be used by the view input field which is binding to this control. The
+  /// [ViewNotifier] allows the view to receive updates when external logic modifies the model value
+  /// of this control. To respond to user input, listen to the [viewValueUpdated] stream instead.
+  registerModelUpdatedListener(ViewNotifier notifier) {
+    _viewNotifier = notifier;
+  }
+
+  /// Should only be used by view input fields when the user updates the value within the view.
+  /// Results in [viewValueUpdates] emitting a new event. To programmatically change the value in
+  /// the view, use the [setValue] method instead.
+  onViewValueUpdated(T newValue);
+
+  /// Update the view with a new value. Results in the [ViewNotifier] informing the view that it
+  /// needs to rebuild with the new value.
+  setValue(T newValue);
+
+  /// Whether this control should perform validation every time the value changes. This setting
+  /// affects both when the user changes the value in the view, and when the value is changed using
+  /// [setValue]
+  setAutoValidate(bool autoValidate);
+
+  /// Manually run a validation of the current value using the current validators and return the
+  /// errors. When [notifyView] is true (the default), the control is updated with these errors and
+  /// the view is notified. If [notifyView] is false then the errors are only calculated not stored
+  /// and the view is not notified.
+  Map<String, dynamic> validate([bool notifyView = true]) {
+    final errors = _validators(this);
+  }
+
+  /// Update the validators that should be run when this control is validated.
+  setValidators(ValidatorSet<T> validators) {
+    _validators = validators;
     if (_autoValidate) {
       validate();
     }
-    _updateState();
-    _notify();
   }
-  final _errors = Map<String, String>();
-  String get errors => _errors.length > 0 ? _errors.values.join('\n') : null;
 
-  Future validate() async {
-    _errors.clear();
+  setEnabled(bool enabled) {
+    final enabledDidChange = _enabled != enabled;
+    if (enabledDidChange) {
+      _enabled = enabled;
+      _viewNotifier([ModelUpdateType.State]);
+    }
+  }
+}
+
+
+
+class FormControl<T> extends AbstractControl<T> {
+  FormControl({T initialValue, bool autoValidate, ValidatorSet validators}) {
+    if (initialValue != null) {
+      _value = initialValue;
+    }
+    if (validators != null) {
+      _validators = validators;
+    }
+    _autoValidate = autoValidate == true;
+    if (_autoValidate) {
+      validate();
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+/// Base class for performing validation on an control.
+abstract class Validator<T> extends Equatable {
+  Validator(List props) : super(props);
+  Map<String, dynamic> validate(AbstractControl<T> control);
+
+  @override
+  String toString() => props.isNotEmpty ? (runtimeType.toString() + ":" + props.toString()) : super.toString();
+}
+
+/// Interface for validators that only care about the value of the control.
+abstract class ValueValidator<T> extends Validator<T> {
+  ValueValidator(List props) : super(props);
+
+  Map<String, dynamic> validate(AbstractControl<T> control) {
+    return validateValue(control.value);
+  }
+
+  Map<String, dynamic> validateValue(T value);
+}
+
+
+class ValidatorSet<T> {
+  List<Validator<T>> _validators;
+  List<Validator<T>> get validators => _validators;
+
+  static ValidatorSet<T> builder<T>(List<Validator<T>> validators) {
+    return ValidatorSet(validators);
+  }
+
+  ValidatorSet(List<Validator<T>> validators) {
+    validators.sort((a, b) => a.hashCode.compareTo(b.hashCode));
+    this._validators = validators;
+  }
+
+  Map<String, dynamic> call(AbstractControl<T> control) {
+    final errors = Map<String, dynamic>();
     for (var validator in _validators) {
-      _errors.addAll(validator.validate(_value) ?? {});
+      errors.addAll(validator.validate(control));
     }
-    _updateState();
-    _notify();
-//    if (_asyncValidators.length > 0) {
-//      _pending = true;
-//      List<Map<String, dynamic>> errors = await Future.wait(_asyncValidators.map((validator) => validator.validateAsync(_value)));
-//      _pending = false;
-//      for (var error in errors) {
-//        _errors.addAll(error);
-//      }
-//
-//    }
+    return errors;
   }
 
-  bool get isValid => _errors.length == 0;
-
-  _updateState() {
-    _currentState = FormControlState(value: _value, error: errors);
+  @override
+  String toString() {
+    return "Validators: $_validators";
   }
 
-  _notify() {
-    _stateStreamController.add(_currentState);
+  @override
+  bool operator == (Object other) {
+    return identical(this, other) ||
+        (other is ValidatorSet &&
+            runtimeType == other.runtimeType &&
+            _validatorsEqual(other)
+        );
   }
 
-  FormControlState<T> _currentState;
-  final _stateStreamController = StreamController<FormControlState<T>>.broadcast();
-  Stream<FormControlState<T>> get stateStream => _stateStreamController.stream;
-  FormControlState<T> get state => _currentState;
-}
-
-class FormArray<T> {
-  final List<FormControl<T>> controls;
-  FormArray([this.controls]);
-
-  setAutoValidate(bool autoValidate) {
-    for (var control in controls) {
-      control.setAutoValidate(autoValidate);
+  bool _validatorsEqual(ValidatorSet other) {
+    if (validators.length != other.validators.length) {
+      return false;
     }
+    for (int i = 0; i < validators.length; i++) {
+      if (validators[i] != other.validators[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
-  addControl(FormControl<T> control, [int index])  {
-
-    controls.add(control);
-  }
-
-  removeControl(int index) {
-    controls.removeAt(index);
+  @override
+  int get hashCode {
+    int hashCode = 0;
+    validators.forEach((v) => hashCode = hashCode ^ v.hashCode);
+    return hashCode;
   }
 }
 
-class FormGroupControl<GroupType, ControlType> {
-  final String key;
-  final FormControl<ControlType> control;
-  final ControlChange<GroupType, ControlType> onChange;
-  FormGroupControl({this.key, this.control, this.onChange});
-}
+typedef Deserializer<T> = T Function(Map<String, dynamic> source);
 
-typedef ControlChange<GroupType, ControlType> = GroupType Function(GroupType group, ControlType value);
+class FormGroup<T> extends AbstractControl<T> {
 
-class FormGroup<T> {
-  final _controls = Map<String, FormGroupControl<T, dynamic>>();
-  FormGroup(T initialValue, List<FormGroupControl<T, dynamic>> controls) {
-    for (var control in controls) {
-      _controls[control.key] = control;
-    }
+  final Deserializer<T> deserializer;
+  final Map<String, FormControl> controls;
+
+  FormGroup({@required this.deserializer, @required this.controls, bool autoValidate = false}) {
+    this._autoValidate = autoValidate == true;
   }
 
   FormControl getControl(String controlName) {
-    return _controls[controlName].control;
+    return controls[controlName];
   }
 }
 
+class FormArray<T> extends AbstractControl<List<T>> {
+
+}
+
 class FormBuilder {
-  FormGroupControl<GroupType, ControlType> control<GroupType, ControlType>({String key, ControlType initialValue, List<Validator<ControlType>> validators, ControlChange<GroupType, ControlType> onChange}) {
-    return FormGroupControl<GroupType, ControlType>(
-      key: key,
-      control: FormControl(initialValue, validators),
-      onChange: onChange
-    );
-  }
+
 
   FormGroup group<GroupType>({GroupType initialValue, List<FormGroupControl<GroupType, dynamic>> controls}) {
     return FormGroup<GroupType>(initialValue, controls);

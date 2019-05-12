@@ -158,3 +158,6 @@ Okay its starting to look a bitt better now. Errors show up as they are entered 
 So "validate" button can mark everything as touched, and trigger a rebuild of everything. 
 
 Except I don't think there's a value and validitiy for the entire form. 
+
+## Not using Angular Forms
+So here's a little thought. We can't use the core angular forms since it has dependencies on dart SDK components not included with flutter, like dart:html. So we want to write our own library. In this case, there's not much point copying angular, let's just do our own thing sna dhave enough tests in place so that it behaves how we expected. 
