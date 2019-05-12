@@ -1,18 +1,20 @@
 import 'dart:async';
 
-import 'package:form_testing/forms.dart';
-import 'package:equatable/equatable.dart';
+//import 'package:form_testing/forms.dart';
+import 'package:form_testing/angular_forms.dart';
+import 'package:form_testing/validators.dart';
 
 abstract class FormKeys {
   static const Text = "text";
   static const Dropdown = "dropdown";
 }
 
-class MyFormBloc {
-  final _formStreamController = StreamController<FormControl<String>>();
-  Stream<FormControl<String>> get form => _formStreamController.stream;
 
-  FormControl<String> formField = FormControl<String>("hello world", [NoAtValidator('blah')]);
+class MyFormBloc {
+  final _formStreamController = StreamController<Control<String>>();
+  Stream<Control<String>> get form => _formStreamController.stream;
+
+
 
   MyFormBloc() {
     delayedAddControl();
@@ -20,41 +22,18 @@ class MyFormBloc {
 
   delayedAddControl() async {
     await Future.delayed(Duration());
+    final vb = ValidatorSet.builder;
+    final val = vb([NoAtValidator('blah')]);
+    Control<String> formField = Control<String>("hello@world", val);
     _formStreamController.add(formField);
   }
 
-  post() {
-    formField.setAutoValidate(true);
-  }
+  post() {}
 
 }
 
-class NoFreeValidator implements Validator<String> {
-  @override
-  Map<String, String> validate(String value) {
-    print("validating value, $value");
-    if (value == 'Free') {
-      return {
-        'madErrors': 'Serioulsy, that\'s not how you spell it'
-      };
-    }
-    return null;
-  }
-}
 
-class NoAtValidator extends Equatable implements Validator<String> {
-
-  final String errorText;
-  NoAtValidator([this.errorText = '@ symbol not allowed']) : super([errorText]);
-
-  @override
-  Map<String, String> validate(String value) {
-    if (value.contains('@')) {
-      return {
-        'invalidChars': errorText
-      };
-    }
-    return {};
-  }
-
+class MyDataClass {
+  String textField;
+  String dropdownField;
 }

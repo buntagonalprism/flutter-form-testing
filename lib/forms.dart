@@ -1,7 +1,10 @@
 
 import 'dart:async';
 
+import 'package:form_testing/angular_forms.dart';
 import 'package:meta/meta.dart';
+
+import 'validators.dart';
 
 class FormControlState<T> {
   FormControlState({@required this.value, this.error});
@@ -9,48 +12,38 @@ class FormControlState<T> {
   final String error;
 }
 
-typedef ValidatorFn<T> = Map<String, String> Function(T data);
-
-abstract class _BaseValidator<T> {}
-
-abstract class Validator<T> implements _BaseValidator<T> {
-  Map<String, dynamic> validate(T value);
-}
-
-abstract class AsyncValidator<T> implements _BaseValidator<T> {
-  Future<Map<String, dynamic>> validateAsync(T value);
-}
+typedef ValidatorFn<T> = Map<String, dynamic> Function(T data);
 
 class FormControl<T> {
 
-  FormControl([T initialValue, List<_BaseValidator<T>> validators, bool autoValidate]) {
+  FormControl([T initialValue, List<Validator<T>> validators, bool autoValidate]) {
     _value = initialValue;
-    _initValidators(validators);
+    _validators = validators; //(validators);
     _autoValidate = autoValidate == true;
     validate();
     _updateState();
   }
 
-  _initValidators(List<_BaseValidator<T>> validators) {
-    _baseValidators = validators ?? [];
-    for (var validator in _baseValidators) {
-      if (validator is AsyncValidator) {
-        _asyncValidators.add(validator);
-      } else {
-        _validators.add(validator);
-      }
-    }
-  }
+//  _initValidators(List<Validator<T>> validators) {
+//    Validators = validators ?? [];
+//    for (var validator in Validators) {
+//      if (validator is AsyncValidator) {
+//        _asyncValidators.add(validator);
+//      } else {
+//        _validators.add(validator);
+//      }
+//    }
+//  }
 
-  List<_BaseValidator> _baseValidators;
+//  List<Validator> Validators;
   List<Validator<T>> _validators = [];
-  List<AsyncValidator<T>> _asyncValidators = [];
+//  List<AsyncValidator<T>> _asyncValidators = [];
 
   bool _autoValidate;
   bool _pending;
 
   bool get pending => _pending;
-  List<_BaseValidator> get validators => _baseValidators;
+  List<Validator> get validators => _validators;
 
   setAutoValidate(bool autoValidate) {
     if (!_autoValidate && autoValidate) {
@@ -80,16 +73,17 @@ class FormControl<T> {
     for (var validator in _validators) {
       _errors.addAll(validator.validate(_value) ?? {});
     }
-    if (_asyncValidators.length > 0) {
-      _pending = true;
-      List<Map<String, dynamic>> errors = await Future.wait(_asyncValidators.map((validator) => validator.validateAsync(_value)));
-      _pending = false;
-      for (var error in errors) {
-        _errors.addAll(error);
-      }
-      _updateState();
-      _notify();
-    }
+    _updateState();
+    _notify();
+//    if (_asyncValidators.length > 0) {
+//      _pending = true;
+//      List<Map<String, dynamic>> errors = await Future.wait(_asyncValidators.map((validator) => validator.validateAsync(_value)));
+//      _pending = false;
+//      for (var error in errors) {
+//        _errors.addAll(error);
+//      }
+//
+//    }
   }
 
   bool get isValid => _errors.length == 0;
@@ -128,11 +122,38 @@ class FormArray<T> {
   }
 }
 
-class FormGroup {
-  final Map<String, FormControl> controls;
-  FormGroup(this.controls);
+class FormGroupControl<GroupType, ControlType> {
+  final String key;
+  final FormControl<ControlType> control;
+  final ControlChange<GroupType, ControlType> onChange;
+  FormGroupControl({this.key, this.control, this.onChange});
+}
+
+typedef ControlChange<GroupType, ControlType> = GroupType Function(GroupType group, ControlType value);
+
+class FormGroup<T> {
+  final _controls = Map<String, FormGroupControl<T, dynamic>>();
+  FormGroup(T initialValue, List<FormGroupControl<T, dynamic>> controls) {
+    for (var control in controls) {
+      _controls[control.key] = control;
+    }
+  }
 
   FormControl getControl(String controlName) {
-    return controls[controlName];
+    return _controls[controlName].control;
+  }
+}
+
+class FormBuilder {
+  FormGroupControl<GroupType, ControlType> control<GroupType, ControlType>({String key, ControlType initialValue, List<Validator<ControlType>> validators, ControlChange<GroupType, ControlType> onChange}) {
+    return FormGroupControl<GroupType, ControlType>(
+      key: key,
+      control: FormControl(initialValue, validators),
+      onChange: onChange
+    );
+  }
+
+  FormGroup group<GroupType>({GroupType initialValue, List<FormGroupControl<GroupType, dynamic>> controls}) {
+    return FormGroup<GroupType>(initialValue, controls);
   }
 }

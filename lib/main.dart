@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:form_testing/angular_forms.dart';
 import 'package:form_testing/form_widgets.dart';
 import 'package:form_testing/forms.dart';
 import 'package:form_testing/main_bloc.dart';
@@ -46,8 +47,6 @@ class _MyHomePageState extends State<MyHomePage> {
     })
         .toList();
 
-    ddControl = FormControl<String>('One', [NoFreeValidator()]);
-
   }
 
   @override
@@ -64,25 +63,30 @@ class _MyHomePageState extends State<MyHomePage> {
               stream: _bloc.form,
               builder: _formBuilder,
             ),
-            FormControlBuilder(
-              control: ddControl,
-              builder: (FormControlState<String> state, ValueChanged<String> onChange) {
-                print("Building with value ${state.value}");
-                return InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Choose Option',
-                    errorText: state.error,
-                  ),
-                  isEmpty: false,
-                  child: DropdownButton(
-                    isDense: true,
-                    value: state.value,
-                    items: items,
-                    onChanged: onChange
-                  ),
-                );
-              },
-            ),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'A second field'
+              ),
+            )
+//            FormControlBuilder(
+//              control: ddControl,
+//              builder: (FormControlState<String> state, ValueChanged<String> onChange) {
+//                print("Building with value ${state.value}");
+//                return InputDecorator(
+//                  decoration: InputDecoration(
+//                    labelText: 'Choose Option',
+//                    errorText: state.error,
+//                  ),
+//                  isEmpty: false,
+//                  child: DropdownButton(
+//                    isDense: true,
+//                    value: state.value,
+//                    items: items,
+//                    onChanged: onChange
+//                  ),
+//                );
+//              },
+//            ),
           ],
         ),
       ),
@@ -94,11 +98,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _formBuilder(BuildContext context, AsyncSnapshot<FormControl<String>> control) {
+  Widget _formBuilder(BuildContext context, AsyncSnapshot<Control<String>> control) {
     if (control.hasData) {
       return ControlledTextField(
-        control: control.data,
-        decoration: InputDecoration(
+        control.data,
+        InputDecoration(
           icon: Icon(Icons.person),
           hintText: 'What do people call you?',
           labelText: 'Name *',

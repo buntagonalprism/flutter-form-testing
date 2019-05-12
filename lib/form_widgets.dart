@@ -1,70 +1,71 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:form_testing/forms.dart';
+import 'package:form_testing/angular_forms.dart';
+
 
 class ControlledTextField extends StatefulWidget {
-  final FormControl<String> control;
+
   final InputDecoration decoration;
-  ControlledTextField({
-    @required this.control,
-    this.decoration,
-  }) : assert(control != null);
+  final Control<String> control;
+  ControlledTextField(this.control, [this.decoration]);
 
   @override
-  _ControlledTextFieldState createState() => _ControlledTextFieldState();
+  _ControlledTextFieldState createState() => new _ControlledTextFieldState();
+
 }
 
 class _ControlledTextFieldState extends State<ControlledTextField> {
 
-  TextEditingController _textController;
-  InputDecoration _decoration;
+  InputDecoration decoration;
+  final controller = TextEditingController();
+  final focus = FocusNode();
+  bool focused = false;
 
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.control.value);
-    _decoration = widget.decoration ?? InputDecoration();
+    decoration = widget.decoration ?? InputDecoration();
+    controller.text = widget.control.value;
+    widget.control.registerOnChange((String newValue) {
+      controller.text = newValue;
+    });
+    focus.addListener(() {
+      // Mark field as touched and trigger a rebuild when focus is lost
+      if (focused && !focus.hasFocus) {
+        widget.control.markAsTouched();
+        widget.control.updateValueAndValidity();
+      }
+      focused = focus.hasFocus;
+    });
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return FormControlBuilder<String>(
-      control: widget.control,
-      builder: (FormControlState<String> state, ValueChanged<String> onChange) {
-        print("Is this building");
-        return TextField(
-            controller: _textController,
-            onChanged: onChange,
-            decoration: _decoration.copyWith(errorText: state.error)
-        );
-      },
-    );
-  }
-}
-
-
-
-
-class FormControlBuilder<T> extends StatelessWidget {
-
-  final FormControl<T> control;
-  final FieldBuilder<T> builder;
-  FormControlBuilder({@required this.control, @required this.builder});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: control.stateStream,
-      initialData: control.state,
-      builder: (context, AsyncSnapshot<FormControlState<T>> stateSnapshot) {
-        return builder(stateSnapshot.requireData, (T newValue) => control.setValue(newValue));
+      stream: widget.control.statusChanges,
+      initialData: widget.control.status,
+      builder: (context, status) {
+        return TextField(
+          focusNode: focus,
+          controller: controller,
+          onChanged: (value) => widget.control.updateValue(value, emitModelToViewChange: false),
+          decoration: decoration.copyWith(errorText: errorText),
+        );
       },
     );
+  }
+
+  String get errorText {
+    if (widget.control.touched) {
+      return widget.control.errors.length > 0 ? widget.control.errors.values.map((error) => error.toString()).join('\n') : null;
+    } else {
+      return null;
+    }
   }
 }
 
 
-typedef FieldBuilder<T> = Widget Function(FormControlState<T> state, ValueChanged<T> onChange);
+typedef FieldBuilder<T> = Widget Function(T state, ValueChanged<T> onChange);
 
 
