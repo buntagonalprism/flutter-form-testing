@@ -1,13 +1,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:form_testing/angular_forms.dart';
+import 'package:form_testing/forms.dart';
 
 
 class ControlledTextField extends StatefulWidget {
 
   final InputDecoration decoration;
-  final Control<String> control;
+  final FormControl<String> control;
   ControlledTextField(this.control, [this.decoration]);
 
   @override
@@ -27,14 +27,15 @@ class _ControlledTextFieldState extends State<ControlledTextField> {
     super.initState();
     decoration = widget.decoration ?? InputDecoration();
     controller.text = widget.control.value;
-    widget.control.registerOnChange((String newValue) {
-      controller.text = newValue;
+    widget.control.registerModelUpdatedListener((Map<ModelUpdateType, dynamic> updates) {
+      if (updates.containsKey(ModelUpdateType.Value)) {
+        controller.text = updates[ModelUpdateType.Value];
+      }
     });
     focus.addListener(() {
       // Mark field as touched and trigger a rebuild when focus is lost
       if (focused && !focus.hasFocus) {
-        widget.control.markAsTouched();
-        widget.control.updateValueAndValidity();
+        widget.control.setDisplayErrors(true);
       }
       focused = focus.hasFocus;
     });
@@ -42,22 +43,16 @@ class _ControlledTextFieldState extends State<ControlledTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: widget.control.statusChanges,
-      initialData: widget.control.status,
-      builder: (context, status) {
-        return TextField(
-          focusNode: focus,
-          controller: controller,
-          onChanged: (value) => widget.control.updateValue(value, emitModelToViewChange: false),
-          decoration: decoration.copyWith(errorText: errorText),
-        );
-      },
+    return TextField(
+      focusNode: focus,
+      controller: controller,
+      onChanged: (value) => widget.control.onViewValueUpdated(value),
+      decoration: decoration.copyWith(errorText: errorText),
     );
   }
 
   String get errorText {
-    if (widget.control.touched) {
+    if (widget.control.displayErrors && widget.control.enabled) {
       return widget.control.errors.length > 0 ? widget.control.errors.values.map((error) => error.toString()).join('\n') : null;
     } else {
       return null;

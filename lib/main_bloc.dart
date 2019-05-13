@@ -1,7 +1,6 @@
 import 'dart:async';
 
-//import 'package:form_testing/forms.dart';
-import 'package:form_testing/angular_forms.dart';
+import 'package:form_testing/forms.dart';
 import 'package:form_testing/validators.dart';
 
 abstract class FormKeys {
@@ -11,8 +10,8 @@ abstract class FormKeys {
 
 
 class MyFormBloc {
-  final _formStreamController = StreamController<Control<String>>();
-  Stream<Control<String>> get form => _formStreamController.stream;
+  final _formStreamController = StreamController<FormControl<String>>();
+  Stream<FormControl<String>> get form => _formStreamController.stream;
 
 
 
@@ -24,7 +23,7 @@ class MyFormBloc {
     await Future.delayed(Duration());
     final vb = ValidatorSet.builder;
     final val = vb([NoAtValidator('blah')]);
-    Control<String> formField = Control<String>("hello@world", val);
+    FormControl<String> formField = FormControl<String>(initialValue: "hello@world", validators: val);
     _formStreamController.add(formField);
   }
 

@@ -1,13 +1,12 @@
-import 'package:equatable/equatable.dart';
-import 'package:form_testing/angular_forms.dart';
+import 'package:form_testing/forms.dart';
 
 
-class NoFreeValidator extends Validator<String> {
+class NoFreeValidator extends ValueValidator<String> {
 
   NoFreeValidator(): super([]);
 
   @override
-  Map<String, String> validate(String value) {
+  Map<String, dynamic> validateValue(String value) {
     print("validating value, $value");
     if (value == 'Free') {
       return {
@@ -18,14 +17,14 @@ class NoFreeValidator extends Validator<String> {
   }
 }
 
-class NoAtValidator extends Validator<String> {
+class NoAtValidator extends ValueValidator<String> {
 
   final String errorText;
 
   NoAtValidator([this.errorText = '@ symbol not allowed']) : super([errorText]);
 
   @override
-  Map<String, String> validate(String value) {
+  Map<String, String> validateValue(String value) {
     if (value.contains('@')) {
       return {
         'invalidChars': errorText

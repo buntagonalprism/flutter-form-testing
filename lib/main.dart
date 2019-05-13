@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:form_testing/angular_forms.dart';
 import 'package:form_testing/form_widgets.dart';
 import 'package:form_testing/forms.dart';
 import 'package:form_testing/main_bloc.dart';
@@ -98,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _formBuilder(BuildContext context, AsyncSnapshot<Control<String>> control) {
+  Widget _formBuilder(BuildContext context, AsyncSnapshot<FormControl<String>> control) {
     if (control.hasData) {
       return ControlledTextField(
         control.data,
