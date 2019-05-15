@@ -14,8 +14,8 @@ class MyTestClass {
 typedef String ValidatorFn(String input);
 
 void main() {
-  test('Functions can be asserted as equals each other', () async {
+  test('Functions with the same body are not equal', () async {
     final sut = MyTestClass();
-    expect(sut.getValidator('hello'), sut.getValidator('hello'));
+    expect(sut.getValidator('hello') == sut.getValidator('hello'), false);
   });
 }

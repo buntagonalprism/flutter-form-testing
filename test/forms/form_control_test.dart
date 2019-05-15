@@ -1,31 +1,32 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:form_testing/forms.dart';
+import 'package:form_testing/forms/forms.dart';
 
 void main() {
   final vb = ValidatorSet.builder;
   MockValidator withErrorValidator;
   MockValidator noErrorValidator;
   Map<String, dynamic> error;
-  List<Map<ModelUpdateType, dynamic>> modelUpdates;
 
   setUp(() {
     error = {'ohNo':'an error occured'};
     withErrorValidator = MockValidator(error);
     noErrorValidator = MockValidator(null);
-    modelUpdates = List<Map<ModelUpdateType, dynamic>>();
   });
-
 
   group('Initialisation', () {
     test('Value and validators stored in control', () {
       final control = FormControl(initialValue: 'surprise', validators: vb([noErrorValidator]));
       expect(control.value, 'surprise');
-      expect(control.validators, vb([withErrorValidator]));
+      expect(control.validators, vb([noErrorValidator]));
     });
     test('Validators run against initial value', () {
       final control = FormControl(initialValue: 'abc', validators: vb([withErrorValidator]));
       expect(withErrorValidator.calledWithValues, ['abc']);
       expect(control.errors, error);
+    });
+    test('Error output defaults to empty map', () {
+      final control = FormControl(initialValue: 'abc');
+      expect(control.errors, {});
     });
   });
 
@@ -54,12 +55,11 @@ void main() {
 
     test('updates view with errors', () {
       final control = FormControl<String>(validators: vb([withErrorValidator]));
-      control.registerModelUpdatedListener((updates) => modelUpdates.add(updates));
+      control.registerModelUpdatedListener((updates) {
+        expect(updates, [ModelUpdate.Errors]);
+        expect(control.errors, error);
+      });
       control.onViewValueUpdated('abc');
-      expect(modelUpdates, [{
-        ModelUpdateType.Errors: error
-      }]);
-      expect(control.errors, error);
     });
   });
 
@@ -88,13 +88,11 @@ void main() {
 
     test('updates view with value and errors', () {
       final control = FormControl<String>(validators: vb([withErrorValidator]));
-      control.registerModelUpdatedListener((updates) => modelUpdates.add(updates));
-      control.setValue('abc');
-      expect(modelUpdates, [{
-        ModelUpdateType.Value: 'abc',
-        ModelUpdateType.Errors: error,
-      }]);
-      expect(control.errors, error);
+      control.registerModelUpdatedListener((updates) {
+        expect(updates, [ModelUpdate.Value, ModelUpdate.Errors]);
+        expect(control.value, 'abc');
+        expect(control.errors, error);
+      });
     });
   });
 
@@ -117,50 +115,34 @@ void main() {
 
     test('updates view with errors', () {
       final control = FormControl<String>(validators: vb([noErrorValidator]));
-      control.registerModelUpdatedListener((updates) => modelUpdates.add(updates));
-      control.setValidators(vb([withErrorValidator]));
-      expect(modelUpdates, [{
-        ModelUpdateType.Errors: error,
-      }]);
+      control.registerModelUpdatedListener((updates) {
+        expect(updates, [ModelUpdate.Errors]);
+        expect(control.errors, error);
+      });
     });
   });
 
   test('changing display errors updates view ', () {
-    final control = FormControl<String>();
-    control.registerModelUpdatedListener((updates) => modelUpdates.add(updates));
+    final control = FormControl<String>(displayErrors: false);
     expect(control.displayErrors, false);
-    control.setDisplayErrors(true);
-    expect(control.displayErrors, true);
-    expect(modelUpdates, [{
-      ModelUpdateType.State: true
-    }]);
 
-    // Set back to false
-    modelUpdates.clear();
-    control.setDisplayErrors(false);
-    expect(control.displayErrors, false);
-    expect(modelUpdates, [{
-      ModelUpdateType.State: true,
-    }]);
+    control.registerModelUpdatedListener((updates) {
+      expect(updates, [ModelUpdate.State]);
+      expect(control.displayErrors, true);
+    });
+    control.setDisplayErrors(true);
   });
 
   test('changing enabled status updates view', () {
-    final control = FormControl<String>();
-    control.registerModelUpdatedListener((updates) => modelUpdates.add(updates));
+    final control = FormControl<String>(enabled: true);
     expect(control.enabled, true);
-    control.setEnabled(false);
-    expect(control.enabled, false);
-    expect(modelUpdates, [{
-      ModelUpdateType.State: true,
-    }]);
 
-    // Enable again
-    modelUpdates.clear();
-    control.setEnabled(true);
-    expect(control.enabled, true);
-    expect(modelUpdates, [{
-      ModelUpdateType.State: true,
-    }]);  });
+    control.registerModelUpdatedListener((updates) {
+      expect(updates, [ModelUpdate.State]);
+      expect(control.enabled, false);
+    });
+    control.setEnabled(false);
+  });
 
 }
 
@@ -175,6 +157,4 @@ class MockValidator extends Validator<String> {
     calledWithValues.add(control.value);
     return returnErrors;
   }
-
 }
-
