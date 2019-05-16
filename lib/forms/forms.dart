@@ -230,9 +230,11 @@ class FormGroup<T> extends AbstractControl<T> {
   Map<String, dynamic> get errors {
     final allControlErrors = Map<String, dynamic>();
     controls.forEach((key, control) {
-      final controlErrors = control.errors;
-      if (controlErrors.length > 0) {
-        allControlErrors[key] = controlErrors;
+      if (control.enabled) {
+        final controlErrors = control.errors;
+        if (controlErrors.length > 0) {
+          allControlErrors[key] = controlErrors;
+        }
       }
     });
     final groupErrors = _validators(this);
@@ -249,7 +251,70 @@ class FormGroup<T> extends AbstractControl<T> {
 }
 
 
+class FormArray<T> extends AbstractControl<List<T>> {
 
+  final  _controls = List<AbstractControl<T>>();
+  FormArray(List<AbstractControl<T>> controls, {List<T> initialValue, bool displayErrors, bool enabled}) {
+    _controls.addAll(controls);
+    if (initialValue != null) {
+      setValue(initialValue);
+    }
+    if (enabled != null) {
+      setEnabled(enabled);
+    }
+    if (displayErrors != null) {
+      setDisplayErrors(displayErrors);
+    }
+  }
+
+  @override
+  setDisplayErrors(bool displayErrors) {
+    _displayErrors = displayErrors;
+    for (var control in _controls){
+      control.setDisplayErrors(displayErrors);
+    }
+  }
+
+  @override
+  setEnabled(bool enabled) {
+    _enabled = enabled;
+    for (var control in _controls){
+      control.setEnabled(enabled);
+    }
+  }
+
+  @override
+  setValidators(ValidatorSet<List<T>> validators) {
+    // TODO: implement setValidators
+    return null;
+  }
+
+  @override
+  setValue(List<T> value)  {
+    if (value != null) {
+      if (value.length != _controls.length) {
+        throw 'Attempting to set FormArray value with a list of length ${value.length}, but FormArray contains ${_controls.length} controls';
+      }
+      for (int i = 0; i < _controls.length; i++) {
+        _controls[i].setValue(value[i]);
+      }
+    }
+  }
+
+  @override
+  List<T> get value {
+    final values = List<T>();
+    for (var control in _controls) {
+      if (control.enabled) {
+        values.add(control.value);
+      }
+    }
+    return values;
+  }
+
+  AbstractControl<T> getControl(int index) => _controls[index];
+
+}
 
 
 

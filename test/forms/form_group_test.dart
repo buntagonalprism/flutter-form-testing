@@ -173,20 +173,18 @@ void main() {
       expect(validator.calledWithValues[0].third, '789');
     });
 
-    test('Getting errors combines all child errors keyed by their control Id', () {
+    test('Getting errors combines all enabled child errors keyed by their control Id', () {
       final validator = MockValidator({'oops':'This is a group error'});
       final group = FormGroup<DummyData>(controls, DummyData.fromJson, validators: vsb([validator]));
       expect(validator.calledWithValues, isEmpty);
-      when(firstMock.errors).thenReturn({});
+      when(firstMock.errors).thenReturn({}); // Should not be present in group error - no errors
+      when(secondMock.enabled).thenReturn(false); // Should not be present in group error - disabled
       when(secondMock.errors).thenReturn({'secondErr':'yes'});
       when(thirdMock.errors).thenReturn({'thirdErrOne': 'also', 'thirdErrTwo':'another'});
       final errors = group.errors;
       expect(errors, {
         'oops': 'This is a group error',
         'controlErrors': {
-          SECOND_KEY: {
-            'secondErr': 'yes'
-          },
           THIRD_KEY: {
             'thirdErrOne': 'also',
             'thirdErrTwo': 'another'
