@@ -54,7 +54,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: ControlledTextField(
-                _bloc.form.getControl('email'),
+                _bloc.form.controls['email'],
                 decoration: InputDecoration(
                     labelText: 'Email Address'
                 ),
@@ -65,7 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: ControlledTextField(
-                _bloc.form.getControl('password'),
+                _bloc.form.controls['password'],
                 decoration: InputDecoration(
                     labelText: 'Password',
                     suffixIcon: IconButton(
@@ -80,7 +80,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: ControlledTextField(
-                _bloc.form.getControl('confirmation'),
+                _bloc.form.controls['confirmation'],
                 decoration: InputDecoration(
                     labelText: 'Confirm Password',
                     suffixIcon: IconButton(

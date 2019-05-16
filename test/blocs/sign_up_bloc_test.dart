@@ -12,29 +12,29 @@ void main() {
   });
 
   test('Email address validators', () {
-    expect(bloc.form.getControl('email').validators, vsb([
+    expect(bloc.form.controls['email'].validators, vsb([
       EmailAddressValidator('Invalid email address'),
       RequiredValidator('put an email in here'),
     ]));
   });
 
   test('Password validators', () {
-    expect(bloc.form.getControl('password').validators, vsb([
+    expect(bloc.form.controls['password'].validators, vsb([
       MinLengthValidator(6, 'Password must be at least 6 characters'),
       RequiredValidator('Yeah you gotta have a password'),
     ]));
   });
 
   test('Initial confirm validator', () {
-    expect(bloc.form.getControl('confirmation').validators, vsb([
+    expect(bloc.form.controls['confirmation'].validators, vsb([
       RequiredValidator('This is where the confirmation goes'),
     ]));
   });
 
   test('Updating password changes confirm validators', () async {
-    bloc.form.getControl('password').onViewValueUpdated('abc123');
+    (bloc.form.controls['password'] as FormControl).onViewValueUpdated('abc123');
     await Future.delayed(Duration());
-    expect(bloc.form.getControl('confirmation').validators, vsb([
+    expect(bloc.form.controls['confirmation'].validators, vsb([
       RegexValidator(RegExp('abc123'), 'Does not match'),
       RequiredValidator('This is where the confirmation goes'),
     ]));

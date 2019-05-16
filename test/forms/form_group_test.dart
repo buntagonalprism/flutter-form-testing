@@ -34,9 +34,9 @@ void main() {
 
   test('Get controller by key', () {
     final group = FormGroup<DummyData>(controls, DummyData.fromJson);
-    expect(group.getControl(FIRST_KEY), firstMock);
-    expect(group.getControl(SECOND_KEY), secondMock);
-    expect(group.getControl(THIRD_KEY), thirdMock);
+    expect(group.controls[FIRST_KEY], firstMock);
+    expect(group.controls[SECOND_KEY], secondMock);
+    expect(group.controls[THIRD_KEY], thirdMock);
   });
 
   group('Initialisation passes down', () {

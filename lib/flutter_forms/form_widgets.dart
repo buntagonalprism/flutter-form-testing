@@ -19,7 +19,7 @@ class ControlledTextField extends StatefulWidget {
   });
 
   String get errorText {
-    if (control.submitRequested && control.enabled) {
+    if ((control.touched || control.submitRequested) && control.enabled) {
       return control.errors.length > 0 ? control.errors.values.map((error) => error.toString()).join('\n') : null;
     } else {
       return null;
@@ -40,27 +40,19 @@ class _ControlledTextFieldState extends State<ControlledTextField> {
   void initState() {
     super.initState();
     controller.text = widget.control.value;
-    widget.control.registerModelUpdatedListener((List<ModelUpdate> updates) {
-      if (updates.contains(ModelUpdate.Value)) {
+    widget.control.registerModelUpdatedListener(() {
+      if (controller.text != widget.control.value) {
         controller.text = widget.control.value;
-        if (updates.length > 0) {
-          _redraw();
-        }
-      } else {
-        _redraw();
       }
+      setState((){});
     });
     focus.addListener(() {
       // Mark field as touched and trigger a rebuild when focus is lost
       if (focused && !focus.hasFocus) {
-        widget.control.setSubmitRequested(true);
+        widget.control.setTouched(true);
       }
       focused = focus.hasFocus;
     });
-  }
-
-  _redraw() {
-    setState(() {});
   }
 
   @override

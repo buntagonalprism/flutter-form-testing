@@ -31,38 +31,6 @@ void main() {
   });
 
 
-  group('view value changes', () {
-    test('Update control value', () {
-      final control = FormControl<String>(initialValue: 'initial');
-      expect(control.value, 'initial');
-      control.onViewValueUpdated('updated');
-      expect(control.value, 'updated');
-    });
-
-    test('runs validation', () {
-      final control = FormControl<String>(initialValue: 'initial', validators: vb([noErrorValidator]));
-      control.onViewValueUpdated('foobar');
-      expect(noErrorValidator.calledWithValues, ['initial', 'foobar']);
-    });
-
-    test('update value listeners', () {
-      final control = FormControl<String>();
-      expect(control.valueUpdated, emitsInOrder([
-        'xyz'
-      ]));
-      control.onViewValueUpdated('xyz');
-    });
-
-    test('updates view with errors', () {
-      final control = FormControl<String>(validators: vb([withErrorValidator]));
-      control.registerModelUpdatedListener((updates) {
-        expect(updates, [ModelUpdate.Errors]);
-        expect(control.errors, error);
-      });
-      control.onViewValueUpdated('abc');
-    });
-  });
-
 
   group('Setting value', () {
     test('Updates control value', () {
@@ -88,11 +56,14 @@ void main() {
 
     test('updates view with value and errors', () {
       final control = FormControl<String>(validators: vb([withErrorValidator]));
-      control.registerModelUpdatedListener((updates) {
-        expect(updates, [ModelUpdate.Value, ModelUpdate.Errors]);
+      bool didChange = false;
+      control.registerModelUpdatedListener(() {
         expect(control.value, 'abc');
         expect(control.errors, error);
+        didChange = true;
       });
+      control.setValue('abc');
+      expect(didChange, true);
     });
   });
 
@@ -115,8 +86,7 @@ void main() {
 
     test('updates view with errors', () {
       final control = FormControl<String>(validators: vb([noErrorValidator]));
-      control.registerModelUpdatedListener((updates) {
-        expect(updates, [ModelUpdate.Errors]);
+      control.registerModelUpdatedListener(() {
         expect(control.errors, error);
       });
     });
@@ -126,22 +96,39 @@ void main() {
     final control = FormControl<String>();
     expect(control.submitRequested, false);
 
-    control.registerModelUpdatedListener((updates) {
-      expect(updates, [ModelUpdate.State]);
+    bool didChange = false;
+    control.registerModelUpdatedListener(() {
       expect(control.submitRequested, true);
+      didChange = true;
     });
     control.setSubmitRequested(true);
+    expect(didChange, true);
   });
 
   test('changing enabled status updates view', () {
     final control = FormControl<String>(enabled: true);
     expect(control.enabled, true);
 
-    control.registerModelUpdatedListener((updates) {
-      expect(updates, [ModelUpdate.State]);
+    bool didChange = false;
+    control.registerModelUpdatedListener(() {
       expect(control.enabled, false);
+      didChange = true;
     });
     control.setEnabled(false);
+    expect(didChange, true);
+  });
+
+  test('changing touched status updates view', () {
+    final control = FormControl<String>();
+    expect(control.touched, false);
+
+    bool didChange = false;
+    control.registerModelUpdatedListener(() {
+      expect(control.touched, true);
+      didChange = true;
+    });
+    control.setTouched(true);
+    expect(didChange, true);
   });
 
 }

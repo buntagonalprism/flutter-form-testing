@@ -3,17 +3,12 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 
-enum ModelUpdate {
-  Value,
-  Errors,
-  State
-}
 
-typedef ViewNotifier(List<ModelUpdate> updates);
+typedef ViewNotifier();
 
 abstract class AbstractControl<T> {
 
-  T _value;
+
   final _errors = Map<String, dynamic>();
 
 
@@ -50,7 +45,7 @@ abstract class AbstractControl<T> {
   ValidatorSet<T> get validators => _validators;
 
   /// Get the value of the control. If this control is disabled, the value will be returned as null
-  T get value => _value;
+  T get value;
 
   /// Update the value of this control
   setValue(T value);
@@ -80,6 +75,7 @@ abstract class AbstractControl<T> {
 
 
 class FormControl<T> extends AbstractControl<T> {
+  T _value;
   final _valueController = StreamController<T>.broadcast();
   Stream<T> get valueUpdated => _valueController.stream;
 
@@ -94,6 +90,9 @@ class FormControl<T> extends AbstractControl<T> {
     _updateErrors();
   }
 
+  @override
+  T get value => _value;
+
   /// Should only be used by the view input field which is binding to this control. The
   /// [ViewNotifier] allows the view to receive updates including value, errors or state changes
   /// occur in this control. To respond to user input, listen to the [valueUpdated] stream instead.
@@ -107,7 +106,7 @@ class FormControl<T> extends AbstractControl<T> {
   onViewValueUpdated(T newValue) {
     _value = newValue;
     _updateErrors();
-    _notifyView([ModelUpdate.Errors]);
+    _notifyView();
     _notifyValueListeners();
   }
 
@@ -115,19 +114,19 @@ class FormControl<T> extends AbstractControl<T> {
   setValidators(ValidatorSet<T> validators) {
     _validators = validators;
     _updateErrors();
-    _notifyView([ModelUpdate.Errors]);
+    _notifyView();
   }
 
   @override
   setSubmitRequested(bool submitRequested) {
     _submitRequested = submitRequested;
-    _notifyView([ModelUpdate.State]);
+    _notifyView();
   }
 
   @override
   setEnabled(bool enabled) {
     _enabled = enabled;
-    _notifyView([ModelUpdate.State]);
+    _notifyView();
   }
 
   /// Update the view with a new value. Results in the [ViewNotifier] informing the view that it
@@ -136,32 +135,40 @@ class FormControl<T> extends AbstractControl<T> {
   setValue(T newValue) {
     _value = newValue;
     _updateErrors();
-    _notifyView([ModelUpdate.Value, ModelUpdate.Errors]);
+    _notifyView();
     _notifyValueListeners();
   }
 
   /// Notify the a bound input view field of changes
-  _notifyView(List<ModelUpdate> updates) {
+  _notifyView() {
     if (_viewNotifier != null) {
-      _viewNotifier(updates);
+      _viewNotifier();
     }
   }
 
   void _notifyValueListeners() {
     _valueController.add(_value);
   }
+
+  void setTouched(bool touched) {
+    _touched = touched;
+    _notifyView();
+  }
 }
 
 typedef Deserializer<T> = T Function(Map<String, dynamic> source);
 
 class FormGroup<T> extends AbstractControl<T> {
-  final Map<String, AbstractControl> controls;
+  final _controls = Map<String, AbstractControl>();
   final Deserializer<T> deserializer;
-  FormGroup(this.controls, this.deserializer, {
+  FormGroup(Map<String, AbstractControl> controls, this.deserializer, {
     T initialValue,
     bool enabled,
     ValidatorSet<T> validators,
   }) {
+    if (controls != null) {
+      _controls.addAll(controls);
+    }
     if (initialValue != null) {
       setValue(initialValue);
     }
@@ -171,9 +178,8 @@ class FormGroup<T> extends AbstractControl<T> {
     _validators = validators ?? ValidatorSet<T>([]);
   }
 
-  FormControl getControl(String key) {
-    return controls[key];
-  }
+  Map<String, AbstractControl> get controls => _controls;
+
 
   @override
   T get value {
@@ -255,8 +261,14 @@ class FormGroup<T> extends AbstractControl<T> {
 
 class FormArray<T> extends AbstractControl<List<T>> {
 
+  final _valueController = StreamController<List<T>>.broadcast();
+  final _enabledController = StreamController<bool>.broadcast();
+
+  Stream<List<T>> get valueUpdated => _valueController.stream;
+  Stream<bool> get enabledUpdated => _enabledController.stream;
+
   final  _controls = List<AbstractControl<T>>();
-  FormArray(List<AbstractControl<T>> controls, {List<T> initialValue, bool enabled}) {
+  FormArray(List<AbstractControl<T>> controls, {List<T> initialValue, bool enabled, ValidatorSet<List<T>> validators}) {
     _controls.addAll(controls);
     if (initialValue != null) {
       setValue(initialValue);
@@ -264,6 +276,16 @@ class FormArray<T> extends AbstractControl<List<T>> {
     if (enabled != null) {
       setEnabled(enabled);
     }
+    _validators = validators ?? ValidatorSet<List<T>>([]);
+  }
+
+  List<AbstractControl<T>> get controls => _controls;
+
+  /// Should only be used by the view input field which is binding to this control. The
+  /// [ViewNotifier] allows the view to receive updates including value, errors or state changes
+  /// occur in this control. To respond to user input, listen to the [valueUpdated] stream instead.
+  registerModelUpdatedListener(ViewNotifier notifier) {
+    _viewNotifier = notifier;
   }
 
   @override
@@ -277,6 +299,7 @@ class FormArray<T> extends AbstractControl<List<T>> {
   @override
   setEnabled(bool enabled) {
     _enabled = enabled;
+    _enabledController.add(_enabled);
     for (var control in _controls){
       control.setEnabled(enabled);
     }
@@ -284,8 +307,7 @@ class FormArray<T> extends AbstractControl<List<T>> {
 
   @override
   setValidators(ValidatorSet<List<T>> validators) {
-    // TODO: implement setValidators
-    return null;
+    _validators = validators;
   }
 
   @override
@@ -297,6 +319,7 @@ class FormArray<T> extends AbstractControl<List<T>> {
       for (int i = 0; i < _controls.length; i++) {
         _controls[i].setValue(value[i]);
       }
+
     }
   }
 
@@ -311,7 +334,48 @@ class FormArray<T> extends AbstractControl<List<T>> {
     return values;
   }
 
-  AbstractControl<T> getControl(int index) => _controls[index];
+  @override
+  Map<String, dynamic> get errors {
+    final allControlErrors = Map<String, Map<String, dynamic>>();
+    for (int i = 0; i < _controls.length; i++) {
+      final control = _controls[i];
+      if (control.enabled) {
+        final controlErrors = control.errors;
+        if (controlErrors.length > 0) {
+          allControlErrors[i.toString()] = controlErrors;
+        }
+      }
+    }
+    final groupErrors = _validators(this);
+    if (allControlErrors.length > 0) {
+      groupErrors['controlErrors'] = allControlErrors;
+    }
+    return groupErrors;
+  }
+
+  void append(AbstractControl<T> control) {
+    _controls.add(control);
+    _notifyValue();
+  }
+
+  void insertAt(AbstractControl<T> control, int index) {
+    _controls.insert(index, control);
+    _notifyValue();
+  }
+
+  void removeAt(int index) {
+    _controls.removeAt(index);
+    _notifyValue();
+  }
+
+  _notifyValue() {
+    if (_valueController.hasListener) {
+      _valueController.add(value);
+    }
+    if (_viewNotifier != null) {
+      _viewNotifier();
+    }
+  }
 
 }
 
