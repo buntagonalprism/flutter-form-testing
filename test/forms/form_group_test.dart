@@ -69,20 +69,6 @@ void main() {
       verifyNever(secondMock.setEnabled(any));
       verifyNever(thirdMock.setEnabled(any));
     });
-
-    test('display errors status when supplied', () {
-      FormGroup<DummyData>(controls, DummyData.fromJson, displayErrors: true);
-      verify(firstMock.setDisplayErrors(true)).called(1);
-      verify(secondMock.setDisplayErrors(true)).called(1);
-      verify(thirdMock.setDisplayErrors(true)).called(1);
-    });
-
-    test('no display error status when not supplied', () {
-      FormGroup<DummyData>(controls, DummyData.fromJson);
-      verifyNever(firstMock.setDisplayErrors(any));
-      verifyNever(secondMock.setDisplayErrors(any));
-      verifyNever(thirdMock.setDisplayErrors(any));
-    });
   });
 
 
@@ -120,13 +106,13 @@ void main() {
       verify(thirdMock.setValue('dfg')).called(1);
     });
 
-    test('displayErrors status', () {
+    test('submitRequest status', () {
       final group = FormGroup<DummyData>(controls, DummyData.fromJson);
-      verifyNever(firstMock.setDisplayErrors(any));
-      group.setDisplayErrors(false);
-      verify(firstMock.setDisplayErrors(false)).called(1);
-      verify(secondMock.setDisplayErrors(false)).called(1);
-      verify(thirdMock.setDisplayErrors(false)).called(1);
+      verifyNever(firstMock.setSubmitRequested(any));
+      group.setSubmitRequested(false);
+      verify(firstMock.setSubmitRequested(false)).called(1);
+      verify(secondMock.setSubmitRequested(false)).called(1);
+      verify(thirdMock.setSubmitRequested(false)).called(1);
     });
 
     test('enabled status', () {

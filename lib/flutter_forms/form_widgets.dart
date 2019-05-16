@@ -19,7 +19,7 @@ class ControlledTextField extends StatefulWidget {
   });
 
   String get errorText {
-    if (control.displayErrors && control.enabled) {
+    if (control.submitRequested && control.enabled) {
       return control.errors.length > 0 ? control.errors.values.map((error) => error.toString()).join('\n') : null;
     } else {
       return null;
@@ -53,7 +53,7 @@ class _ControlledTextFieldState extends State<ControlledTextField> {
     focus.addListener(() {
       // Mark field as touched and trigger a rebuild when focus is lost
       if (focused && !focus.hasFocus) {
-        widget.control.setDisplayErrors(true);
+        widget.control.setSubmitRequested(true);
       }
       focused = focus.hasFocus;
     });

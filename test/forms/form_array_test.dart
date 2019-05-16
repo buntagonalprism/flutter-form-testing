@@ -55,22 +55,6 @@ void main() {
       verifyNever(secondMock.setEnabled(any));
       verifyNever(thirdMock.setEnabled(any));
     });
-
-    test('display errors status when supplied', () {
-      final array = FormArray<String>(controls, displayErrors: true);
-      expect(array.displayErrors, true);
-      verify(firstMock.setDisplayErrors(true)).called(1);
-      verify(secondMock.setDisplayErrors(true)).called(1);
-      verify(thirdMock.setDisplayErrors(true)).called(1);
-    });
-
-    test('no display error status when not supplied', () {
-      final array = FormArray<String>(controls);
-      expect(array.displayErrors, false);
-      verifyNever(firstMock.setDisplayErrors(any));
-      verifyNever(secondMock.setDisplayErrors(any));
-      verifyNever(thirdMock.setDisplayErrors(any));
-    });
   });
 
   group('Get value', () {
@@ -109,13 +93,13 @@ void main() {
       verify(thirdMock.setValue('dfg')).called(1);
     });
 
-    test('displayErrors status', () {
+    test('submitRequest status', () {
       final array = FormArray<String>(controls);
-      verifyNever(firstMock.setDisplayErrors(any));
-      array.setDisplayErrors(false);
-      verify(firstMock.setDisplayErrors(false)).called(1);
-      verify(secondMock.setDisplayErrors(false)).called(1);
-      verify(thirdMock.setDisplayErrors(false)).called(1);
+      verifyNever(firstMock.setSubmitRequested(any));
+      array.setSubmitRequested(false);
+      verify(firstMock.setSubmitRequested(false)).called(1);
+      verify(secondMock.setSubmitRequested(false)).called(1);
+      verify(thirdMock.setSubmitRequested(false)).called(1);
     });
 
     test('enabled status', () {

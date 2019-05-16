@@ -122,15 +122,15 @@ void main() {
     });
   });
 
-  test('changing display errors updates view ', () {
-    final control = FormControl<String>(displayErrors: false);
-    expect(control.displayErrors, false);
+  test('changing submit requested updates view ', () {
+    final control = FormControl<String>();
+    expect(control.submitRequested, false);
 
     control.registerModelUpdatedListener((updates) {
       expect(updates, [ModelUpdate.State]);
-      expect(control.displayErrors, true);
+      expect(control.submitRequested, true);
     });
-    control.setDisplayErrors(true);
+    control.setSubmitRequested(true);
   });
 
   test('changing enabled status updates view', () {

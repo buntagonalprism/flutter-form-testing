@@ -13,7 +13,7 @@ void main() {
   setUp(() {
     mock = ControlMock();
     when(mock.enabled).thenReturn(true);
-    when(mock.displayErrors).thenReturn(false);
+    when(mock.submitRequested).thenReturn(false);
     when(mock.errors).thenReturn({});
   });
 
@@ -81,11 +81,11 @@ void main() {
 
 
   group('Error message:', () {
-    group('when displayErrors is true,', () {
+    group('when submitRequested is true,', () {
       ControlMock mock;
       setUp(() {
         mock = ControlMock();
-        when(mock.displayErrors).thenReturn(true);
+        when(mock.submitRequested).thenReturn(true);
         when(mock.errors).thenReturn({'er1': 'hello', 'er2': 'foobar'});
       });
       test('is null when field disabled', () {
@@ -99,11 +99,11 @@ void main() {
         expect(field.errorText, 'hello\nfoobar');
       });
     });
-    group('when displayErrors is false,', () {
+    group('when submitRequested is false,', () {
       ControlMock mock;
       setUp(() {
         mock = ControlMock();
-        when(mock.displayErrors).thenReturn(false);
+        when(mock.submitRequested).thenReturn(false);
         when(mock.errors).thenReturn({'er1': 'hello', 'er2': 'foobar'});
       });
       test('is null when field disabled', () {
@@ -120,7 +120,7 @@ void main() {
 
     testWidgets('is displayed in text field', (WidgetTester tester) async {
       when(mock.enabled).thenReturn(true);
-      when(mock.displayErrors).thenReturn(true);
+      when(mock.submitRequested).thenReturn(true);
       when(mock.errors).thenReturn({'er1': 'howdy', 'er2': 'friend'});
       final field = ControlledTextField(mock);
       final errorText = field.errorText;
@@ -128,13 +128,13 @@ void main() {
       expect(find.text(errorText), findsOneWidget);
     });
 
-    testWidgets('display is updated when control displayErrors changes', (WidgetTester tester) async {
+    testWidgets('display is updated when control submit requested changes', (WidgetTester tester) async {
       final validators = ValidatorSet.builder([MockValidator({'er1': 'blue', 'er2': 'sky'})]);
-      final control = FormControl<String>(displayErrors: false, validators: validators);
+      final control = FormControl<String>(validators: validators);
       await pumpWithMaterial(tester, ControlledTextField(control));
       final errorFinder = find.text('blue\nsky');
       expect(errorFinder, findsNothing);
-      control.setDisplayErrors(true);
+      control.setSubmitRequested(true);
       await tester.pump();
       expect(errorFinder, findsOneWidget);
     });
@@ -148,10 +148,10 @@ void main() {
       ]
     ));
     await tester.tap(find.byType(ControlledTextField));
-    verifyNever(mock.setDisplayErrors(any));
+    verifyNever(mock.setSubmitRequested(any));
     // Change focus to another text field
     await tester.tap(find.byType(TextFormField));
-    verify(mock.setDisplayErrors(true)).called(1);
+    verify(mock.setSubmitRequested(true)).called(1);
   });
   
 }
@@ -162,6 +162,8 @@ Future pumpWithMaterial(WidgetTester tester, Widget child) {
     ),
   ));
 }
+
+
 
 class MockValidator extends Validator<String> {
   final Map<String, dynamic> returnErrors;

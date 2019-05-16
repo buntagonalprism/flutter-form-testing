@@ -94,8 +94,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
             RaisedButton(
               child: Text('SIGN UP'),
               onPressed: () {
-                _bloc.form.setDisplayErrors(true);
-                bool valid = _bloc.form.isValid;
+                _bloc.form.setSubmitRequested(true);
+                bool valid = _bloc.form.valid;
                 if (valid) {
                   showSnackBar('all fields valid');
                   print(_bloc.form.value);

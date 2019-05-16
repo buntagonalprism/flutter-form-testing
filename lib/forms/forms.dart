@@ -19,7 +19,8 @@ abstract class AbstractControl<T> {
 
   ViewNotifier _viewNotifier;
   bool _enabled = true;
-  bool _displayErrors = false;
+  bool _submitRequested = false;
+  bool _touched = false;
   ValidatorSet<T> _validators = ValidatorSet<T>([]);
 
 
@@ -31,13 +32,19 @@ abstract class AbstractControl<T> {
   /// interact with the view bound to this control. This behaviour must be enforced within the view.
   bool get enabled => _enabled;
 
-  /// Whether input fields bound to this control should display error messages. There is no
-  /// relationship between this field and [enabled]. It is up to the implementation of input fields
-  /// to decide whether [enabled] status should also impact whether error messages are displayed.
-  bool get displayErrors => _displayErrors;
+  /// Whether the user has attempted to submit the data for this control. This is useful as an
+  /// indication that error messages should be displayed regardless of [touched] status - e.g. an
+  /// untouched required field still needs to show errors before being submitted.
+  bool get submitRequested => _submitRequested;
 
-  /// Check whether this control is valid, that is - it has no errors.
-  bool get isValid => _errors.length == 0;
+  /// Check whether this control is valid, that is - whether this control or any child control
+  /// has any errors
+  bool get valid => _errors.length == 0;
+
+  /// Check whether this control is touched, that is, whether the user has interacted with this
+  /// control or any child controls. Typically used to control whether error messages are displayed,
+  /// allowing the user a chance to input into the field before showing errors.
+  bool get touched => _touched;
 
   /// The current set of validators used to validate the value in this control.
   ValidatorSet<T> get validators => _validators;
@@ -53,7 +60,7 @@ abstract class AbstractControl<T> {
 
   /// Whether this input field bound to this control is displaying its errors. Typically enabled
   /// either on blur of input fields, or on a form submit button press.
-  setDisplayErrors(bool displayErrors);
+  setSubmitRequested(bool submitRequested);
 
   /// Whether this control should be enabled: i.e. whether the view input field bound to this
   /// control should accept user input. It is up to the view to decide how disabled state should
@@ -76,14 +83,13 @@ class FormControl<T> extends AbstractControl<T> {
   final _valueController = StreamController<T>.broadcast();
   Stream<T> get valueUpdated => _valueController.stream;
 
-  FormControl({T initialValue, ValidatorSet<T> validators, bool displayErrors = false, bool enabled = true}) {
+  FormControl({T initialValue, ValidatorSet<T> validators, bool enabled = true}) {
     if (initialValue != null) {
       _value = initialValue;
     }
     if (validators != null) {
       _validators = validators;
     }
-    _displayErrors = displayErrors == true;
     _enabled = enabled == true;
     _updateErrors();
   }
@@ -113,8 +119,8 @@ class FormControl<T> extends AbstractControl<T> {
   }
 
   @override
-  setDisplayErrors(bool displayErrors) {
-    _displayErrors = displayErrors;
+  setSubmitRequested(bool submitRequested) {
+    _submitRequested = submitRequested;
     _notifyView([ModelUpdate.State]);
   }
 
@@ -153,15 +159,11 @@ class FormGroup<T> extends AbstractControl<T> {
   final Deserializer<T> deserializer;
   FormGroup(this.controls, this.deserializer, {
     T initialValue,
-    bool displayErrors,
     bool enabled,
     ValidatorSet<T> validators,
   }) {
     if (initialValue != null) {
       setValue(initialValue);
-    }
-    if (displayErrors != null) {
-      setDisplayErrors(displayErrors);
     }
     if (enabled != null) {
       setEnabled(enabled);
@@ -187,10 +189,10 @@ class FormGroup<T> extends AbstractControl<T> {
   }
 
   @override
-  setDisplayErrors(bool displayErrors) {
-    _displayErrors = displayErrors;
+  setSubmitRequested(bool submitRequested) {
+    _submitRequested = submitRequested;
     controls.forEach((_, control) {
-      control.setDisplayErrors(displayErrors);
+      control.setSubmitRequested(submitRequested);
     });
   }
 
@@ -247,14 +249,14 @@ class FormGroup<T> extends AbstractControl<T> {
 
 
   @override
-  bool get isValid => errors.length == 0;
+  bool get valid => errors.length == 0;
 }
 
 
 class FormArray<T> extends AbstractControl<List<T>> {
 
   final  _controls = List<AbstractControl<T>>();
-  FormArray(List<AbstractControl<T>> controls, {List<T> initialValue, bool displayErrors, bool enabled}) {
+  FormArray(List<AbstractControl<T>> controls, {List<T> initialValue, bool enabled}) {
     _controls.addAll(controls);
     if (initialValue != null) {
       setValue(initialValue);
@@ -262,16 +264,13 @@ class FormArray<T> extends AbstractControl<List<T>> {
     if (enabled != null) {
       setEnabled(enabled);
     }
-    if (displayErrors != null) {
-      setDisplayErrors(displayErrors);
-    }
   }
 
   @override
-  setDisplayErrors(bool displayErrors) {
-    _displayErrors = displayErrors;
+  setSubmitRequested(bool submitRequested) {
+    _submitRequested = submitRequested;
     for (var control in _controls){
-      control.setDisplayErrors(displayErrors);
+      control.setSubmitRequested(submitRequested);
     }
   }
 
