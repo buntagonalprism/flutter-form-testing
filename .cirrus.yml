@@ -1,15 +1,14 @@
-osx_instance:
-  image: mojave-xcode-10.2-flutter
-
-container:
-  image: cirrusci/flutter:latest
-
 test_task:
+  container:
+    image: cirrusci/flutter:latest
   pub_cache:
     folder: ~/.pub-cache
   test_script: flutter test
 
 build_android_task:
+  only_if: $CIRRUS_BRANCH == 'master'
+  container:
+    image: cirrusci/flutter:latest
   depends_on:
     - test
   build_android_script: flutter build apk --release -v
@@ -17,6 +16,9 @@ build_android_task:
     path: "build/app/outputs/apk/release/app-release.apk"
 
 build_ios_task:
+  only_if: $CIRRUS_BRANCH == 'master'
+  osx_instance:
+    image: mojave-xcode-10.2-flutter
   depends_on:
     - test
   build_ios_script: flutter build ios --release --no-codesign -v
